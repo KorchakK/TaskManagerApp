@@ -7,10 +7,6 @@
 
 import UIKit
 
-protocol TaskListViewDelegate {
-    func reloadData()
-}
-
 class TaskListViewController: UITableViewController {
     
     private let cellId = "task"
@@ -50,21 +46,40 @@ class TaskListViewController: UITableViewController {
     }
     
     @objc private func addTaskButtonPressed() {
-        let addTaskVC = AddTaskViewController()
-        addTaskVC.delegate = self
-        present(addTaskVC, animated: true)
+        showAlert("New task")
     }
-}
-
-// MARK: - DelegateSetup
-extension TaskListViewController: TaskListViewDelegate {
-    func reloadData() {
+    
+    private func saveTask(_ text: String) {
+        StorageManager.shared.saveNewTaskContext(text)
         tasks = StorageManager.shared.fetchTasks()
-        tableView.reloadData()
+        
+        let cellIndex = IndexPath(row: tasks.count - 1, section: 0)
+        tableView.insertRows(at: [cellIndex], with: .automatic)
+    }
+    
+    // MARK: - AlertControllerSetup
+    private func showAlert(_ title: String) {
+        let alert = UIAlertController(
+            title: title,
+            message: "What do you want to do",
+            preferredStyle: .alert
+        )
+        let saveAction = UIAlertAction(title: "Save", style: .default) { _ in
+            guard let textTask = alert.textFields?.first?.text, !textTask.isEmpty else { return }
+            self.saveTask(textTask)
+        }
+        let cancelAction = UIAlertAction(title: "Cancel", style: .destructive)
+        alert.addAction(saveAction)
+        alert.addAction(cancelAction)
+        alert.addTextField { textField in
+            textField.placeholder = "New task"
+        }
+        
+        present(alert, animated: true)
     }
 }
 
-// MARK: - ButtonPressedSetup
+// MARK: - TableSetup
 extension TaskListViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         tasks.count
@@ -81,5 +96,18 @@ extension TaskListViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+    }
+    
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let deleteAction = UIContextualAction(style: .destructive, title: nil) { _, _, completionHandler in
+            self.tasks.remove(at: indexPath.row)
+            self.tableView.deleteRows(at: [indexPath], with: .automatic)
+            completionHandler(true)
+        }
+        deleteAction.image = UIImage(systemName: "trash")
+        deleteAction.backgroundColor = .systemRed
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
+        configuration.performsFirstActionWithFullSwipe = false
+        return configuration
     }
 }
