@@ -37,7 +37,7 @@ class StorageManager {
         return tasks
     }
     
-    func saveTaskContext () {
+    func saveTaskContext() {
         let viewContext = persistentContainer.viewContext
         if viewContext.hasChanges {
             do {
@@ -49,10 +49,23 @@ class StorageManager {
         }
     }
     
-    func saveNewTaskContext (_ text: String) {
+    func saveNewTaskContext(_ text: String) {
         let viewContext = persistentContainer.viewContext
         let task = TaskStorageModel(context: viewContext)
         task.taskTitle = text
+        if viewContext.hasChanges {
+            do {
+                try viewContext.save()
+            } catch {
+                let nserror = error as NSError
+                fatalError("Unresolved error \(nserror), \(nserror.userInfo)")
+            }
+        }
+    }
+    
+    func deleteTaskContext(_ task: TaskStorageModel) {
+        let viewContext = persistentContainer.viewContext
+        viewContext.delete(task)
         if viewContext.hasChanges {
             do {
                 try viewContext.save()
